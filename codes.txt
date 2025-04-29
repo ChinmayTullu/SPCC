@@ -1,907 +1,477 @@
-SPCC CODES
-
-1: Program to generate Three Address Code (TAC)
-
-def is_operator(c):
-    return c in "+-*/"
-
-def precedence(op):
-    if op in ('+', '-'):
-        return 1
-    if op in ('*', '/'):
-        return 2
-    return 0
-
-def infix_to_postfix(expression):
-    stack = []
-    postfix = []
-    tokens = expression.split()
-    
-    for token in tokens:
-        if token.isalnum():  # operand (e.g., a, b, c, d, x1)
-            postfix.append(token)
-        elif is_operator(token):
-            while stack and precedence(stack[-1]) >= precedence(token):
-                postfix.append(stack.pop())
-            stack.append(token)
-        elif token == '(':
-            stack.append(token)
-        elif token == ')':
-            while stack and stack[-1] != '(':
-                postfix.append(stack.pop())
-            stack.pop()  # pop '('
-    
-    while stack:
-        postfix.append(stack.pop())
-    
-    return postfix
-
-def generate_TAC(expression):
-    # assuming expression is like "a = b + c * d"
-    lhs, rhs = expression.split('=')
-    lhs = lhs.strip()
-    rhs = rhs.strip()
-    
-    postfix = infix_to_postfix(rhs)
-    stack = []
-    temp_count = 1
-    tac = []
-    
-    for token in postfix:
-        if token.isalnum():
-            stack.append(token)
-        elif is_operator(token):
-            op2 = stack.pop()
-            op1 = stack.pop()
-            temp = f"t{temp_count}"
-            tac.append(f"{temp} = {op1} {token} {op2}")
-            stack.append(temp)
-            temp_count += 1
-    
-    final_result = stack.pop()
-    tac.append(f"{lhs} = {final_result}")
-    
-    return tac
-
-# Example usage
-expr = input("Enter an expression (e.g., a = b + c * d): ")
-tac_code = generate_TAC(expr)
-
-print("\nThree Address Code:")
-for line in tac_code:
-    print(line)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-2. Program to implement Multi-Pass Macroprocessor for the given Assembly
-Language (Pass1).
-
-import re
-
-# Function to process macro definitions and macro calls
-def process_macros(source_code):
-    macros = {}  # Store macro definitions
-    mnt = {}  # Macro Name Table (MNT)
-    mdt = []  # Macro Definition Table (MDT)
-    at = {}   # Argument Table (AT)
-    
-    current_macro_name = None
-    current_params = []
-    current_body = []
-    
-    # Split the source code into lines
-    lines = source_code.splitlines()
-    
-    # Pass 1: Find macro definitions and macro calls
-    for line in lines:
-        line = line.strip()
-        
-        # Detect macro definition (MACRO <name> <params>)
-        macro_def = re.match(r"MACRO\s+(\w+)\s*(.*)", line)
-        if macro_def:
-            # If we encounter a macro definition, save the previous macro if it exists
-            if current_macro_name:
-                macros[current_macro_name] = {'params': current_params, 'body': current_body}
-                mnt[current_macro_name] = len(mdt)  # Add to MNT
-                mdt.extend(current_body)  # Add the body of the previous macro to MDT
-            
-            current_macro_name = macro_def.group(1)
-            current_params = macro_def.group(2).split(",") if macro_def.group(2) else []
-            current_body = []
-            continue
-        
-        # Detect end of macro definition (MEND)
-        if line.startswith("MEND"):
-            # Save the macro and its body to MDT
-            if current_macro_name:
-                macros[current_macro_name] = {'params': current_params, 'body': current_body}
-                mnt[current_macro_name] = len(mdt)  # Add to MNT
-                mdt.extend(current_body)  # Add the body of the current macro to MDT
-                current_macro_name = None
-                current_params = []
-                current_body = []
-            continue
-        
-        # If we are inside a macro definition, add the line to the body
-        if current_macro_name:
-            current_body.append(line)
-            continue
-        
-        # Process macro calls (Replace with placeholders in the MDT)
-        macro_call = re.match(r"(\w+)\s*(.*)", line)
-        if macro_call:
-            macro_name = macro_call.group(1)
-            if macro_name in macros:
-                params = macro_call.group(2).split(",") if macro_call.group(2) else []
-                at[macro_name] = params  # Add argument mapping to AT
-                # Replace macro call with placeholder
-                mdt.append(f"CALL {macro_name}")
-    
-    # Return all tables and processed code (MDT and MNT)
-    return macros, mnt, mdt, at
-
-# Sample Assembly Code
-source_code = """
-MACRO ADD X, Y
-    LOAD X
-    ADD Y
-MEND
-
-MACRO SUB A, B
-    LOAD A
-    SUB B
-MEND
-
-START
-    ADD 5, 3
-    SUB 7, 4
-END
-"""
-
-# Process the source code
-macros, mnt, mdt, at = process_macros(source_code)
-
-# Output the results of Pass 1
-print("\nMacro Definition Table (MDT):")
-for line in mdt:
-    print(line)
-
-print("\nMacro Name Table (MNT):")
-for name, idx in mnt.items():
-    print(f"{name}: {idx}")
-
-print("\nArgument Table (AT):")
-for macro, args in at.items():
-    print(f"{macro}: {', '.join(args)}")
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-3. Program to implement the FIRST set for the given grammar
-
-def compute_first(symbol, grammar, first_sets):
-    # If FIRST already computed, return it
-    if symbol in first_sets:
-        return first_sets[symbol]
-
-    first = set()
-
-    # If terminal, FIRST is itself
-    if not symbol.isupper():
-        first.add(symbol)
-        return first
-
-    for production in grammar[symbol]:
-        # If production is epsilon
-        if production == "ε":
-            first.add("ε")
-        else:
-            i = 0
-            while i < len(production):
-                sym = production[i]
-
-                # Get FIRST of current symbol
-                sym_first = compute_first(sym, grammar, first_sets)
-
-                # Add all except epsilon
-                first.update(sym_first - {"ε"})
-
-                # If ε not in FIRST(sym), stop
-                if "ε" not in sym_first:
-                    break
-                i += 1
-
-            # If ε in all symbols, add ε
-            if i == len(production):
-                first.add("ε")
-
-    # Cache result
-    first_sets[symbol] = first
-    return first
-
-
-
-grammar = {
-    "E": ["TE'"],
-    "E'": ["+TE'", "ε"],
-    "T": ["FT'"],
-    "T'": ["*FT'", "ε"],
-    "F": ["(E)", "id"]
-}
-
-first_sets = {}
-
-for non_terminal in grammar:
-    compute_first(non_terminal, grammar, first_sets)
-
-print("\nFIRST sets:")
-for nt, first in first_sets.items():
-    print(f"FIRST({nt}) = {{ {', '.join(sorted(first))} }}")
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-4. Program to implement the FOLLOW set for the given grammar
-
-def compute_follow(grammar, first_sets, non_terminals, start_symbol):
-
-    follow_sets = {non_terminal: set() for non_terminal in grammar}
-    follow_sets[start_symbol].add('$') 
-
-    updated = True
-    while updated:
-        updated = False
-        for non_terminal, productions in grammar.items():
-            for production in productions:
-                for i, symbol in enumerate(production):
-                    if symbol in non_terminals:
-
-                        if i + 1 < len(production):
-                            beta = production[i + 1:]
-                            for first_symbol in first_sets[beta[0]]:
-                                if first_symbol != 'ε':
-                                    if first_symbol not in follow_sets[symbol]:
-                                        follow_sets[symbol].add(first_symbol)
-                                        updated = True
- 
-                            if 'ε' in compute_first_of_sequence(beta, first_sets):
-                                for follow_b in follow_sets[non_terminal]:
-                                    if follow_b not in follow_sets[symbol]:
-                                        follow_sets[symbol].add(follow_b)
-                                        updated = True
-
-                        elif i == len(production) - 1:
-                            for follow_b in follow_sets[non_terminal]:
-                                if follow_b not in follow_sets[symbol]:
-                                    follow_sets[symbol].add(follow_b)
-                                    updated = True
-    return follow_sets
-
-def compute_first_of_sequence(symbols, first_sets):
-    first = set()
-    for symbol in symbols:
-        first.update(first_sets[symbol] - {'ε'})
-        if 'ε' not in first_sets[symbol]:
-            return first
-    first.add('ε')
-    return first
-
-if __name__ == '__main__':
-    grammar_input = {
-        'S': [['A', 'B']],
-        'A': [['a'], ['ε']],
-        'B': [['b']]
-    }
-    first_input = {
-        'S': {'a', 'b'},
-        'A': {'a', 'ε'},
-        'B': {'b'},
-        'a': {'a'},
-        'b': {'b'}
-    }
-    non_terminals_input = {'S', 'A', 'B'}
-    start_symbol_input = 'S'
-
-    follow_result = compute_follow(grammar_input, first_input, non_terminals_input, start_symbol_input)
-    print("FOLLOW sets:")
-    for non_terminal, follow_set in follow_result.items():
-        print(f"FOLLOW({non_terminal}) = {follow_set}")
-
-    print("\n--- Another Example ---")
-    grammar_input_2 = {
-        'E': [['T', 'E\'']],
-        'E\'': [['+', 'T', 'E\''], ['ε']],
-        'T': [['F', 'T\'']],
-        'T\'': [['*', 'F', 'T\''], ['ε']],
-        'F': [['(', 'E', ')'], ['id']]
-    }
-    first_input_2 = {
-        'E': {'(', 'id'},
-        'E\'': {'+', 'ε'},
-        'T': {'(', 'id'},
-        'T\'': {'*', 'ε'},
-        'F': {'(', 'id'},
-        '+': {'+'},
-        '*': {'*'},
-        '(': {'('},
-        ')': {')'},
-        'id': {'id'}
-    }
-    non_terminals_input_2 = {'E', 'E\'', 'T', 'T\'', 'F'}
-    start_symbol_input_2 = 'E'
-
-    follow_result_2 = compute_follow(grammar_input_2, first_input_2, non_terminals_input_2, start_symbol_input_2)
-    print("FOLLOW sets:")
-    for non_terminal, follow_set in follow_result_2.items():
-        print(f"FOLLOW({non_terminal}) = {follow_set}")
-
-5. Program to implement LL(1) parser
-FIRST and FOLLOW will be given, Parsing table is expected
-
-# Given Grammar
-grammar = {
-    "E": ["T E'"],
-    "E'": ["+ T E'", "ε"],
-    "T": ["F T'"],
-    "T'": ["* F T'", "ε"],
-    "F": ["( E )", "id"]
-}
-
-# Given FIRST sets
-first_sets = {
-    "E": {"(", "id"},
-    "E'": {"+", "ε"},
-    "T": {"(", "id"},
-    "T'": {"*", "ε"},
-    "F": {"(", "id"}
-}
-
-# Given FOLLOW sets
-follow_sets = {
-    "E": {")", "$"},
-    "E'": {")", "$"},
-    "T": {"+", ")", "$"},
-    "T'": {"+", ")", "$"},
-    "F": {"*", "+", ")", "$"}
-}
-
-# Terminals and Non-terminals
-non_terminals = list(grammar.keys())
-terminals = {"id", "+", "*", "(", ")", "$"}
-
-# Initialize parsing table
-parsing_table = {nt: {t: "" for t in terminals} for nt in non_terminals}
-
-# Helper: get FIRST of a string of symbols
-def get_first_of_string(symbols):
-    first = set()
-    for symbol in symbols.split():
-        if symbol not in first_sets:
-            first.add(symbol)  # terminal
+Experiment 2:
+
+def dfs_recursive(graph,start,visited=None):
+ if visited is None:
+ visited = set()
+ visited.add(start)
+ print(start)
+ for child in graph[start]:
+ if child not in visited:
+ dfs_recursive(graph,child,visited)
+n = int(input("Enter the number of node: "))
+graph = {}
+for _ in range(n):
+ node = input("Node: ")
+ graph[node] = input(f"Enter neighbours of {node} (space-separated): ").split()
+
+start = input("Start node: ")
+dfs_recursive(graph,start)
+
+
+# DLS(depth limit search):
+def dfs_recursive(graph,start,depth,limit,visited=None):
+ if visited is None:
+ visited = set()
+ visited.add(start)
+ print(start)
+
+ if depth >= limit:
+ return
+
+ for child in graph[start]:
+ if child not in visited:
+ dfs_recursive(graph,child,depth+1,limit,visited)
+n = int(input("Enter the number of node: "))
+graph = {}
+for _ in range(n):
+ node = input("Node: ")
+ graph[node] = input(f"Enter neighbours of {node} (space-separated): ").split()
+
+limit = int(input("Enter the limit: "))
+start = input("Start node: ")
+depth = 0
+dfs_recursive(graph,start,depth,limit)
+
+
+# DFID:
+def dls(graph,node,target,depth,limit,visited,path):
+ path.append(node)
+ print("Visiting: ",node)
+
+ if node == target:
+ print("Found the target!")
+ print("Path to target:", " -> ".join(path))
+ return True, True
+
+ if depth == limit:
+ path.pop()
+ return False, len(graph[node]) == 0
+
+ found = False
+ bottom_reached = True
+
+ for child in graph[node]:
+ if child not in visited:
+ result, reached = dls(graph,child,target,depth+1,limit,visited,path)
+ if result:
+ return True,True
+ bottom_reached = bottom_reached and reached
+
+ path.pop()
+ return False,bottom_reached
+
+def dfid(graph,start,target):
+ depth = 0
+ while True:
+ print(f"\nDepth Limit: {depth}")
+ visited = set([start])
+ path = []
+ found,bottom = dls(graph,start,target,0,depth,visited,path)
+ if found:
+ return True
+ if bottom:
+ return False
+ depth += 1
+n = int(input("Enter number of nodes: "))
+graph = {}
+for _ in range(n):
+ node = input("Node: ")
+ graph[node] = input(f"Enter neighbours of {node} (space-separated): ").split()
+start = input("Start node: ")
+target = input("Target node: ")
+found = dfid(graph, start, target)
+if found:
+ print("\nTarget found!")
+else:
+ print("\nTarget not found.")
+
+
+
+# BFS:
+def bfs(graph, root):
+ visited = set()
+ queue = [root]
+ visited.add(root)
+ while queue:
+ # Dequeue from front of the list
+ vertex = queue.pop(0)
+ print(str(vertex) + " ", end="")
+ for neighbour in graph[vertex]:
+ if neighbour not in visited:
+ visited.add(neighbour)
+ queue.append(neighbour)
+n = int(input("Enter the number of vertexes: "))
+graph = {}
+for _ in range(n):
+ node = input("Enter node: ")
+ graph[node] = input(f"Enter neighbours of {node} (space-separated): ").split()
+
+root = input("Enter root node: ")
+bfs(graph,root)
+
+
+# UCS:
+import heapq # Import the heapq module for the priority queue
+
+def ucs(graph, start, goal):
+ pq = []
+ heapq.heappush(pq, (0, start))
+
+ costs = {}
+ for node in graph:
+ costs[node] = float('inf')
+
+ costs[start] = 0
+ parents = {}
+ visited = set()
+
+ while pq:
+ current_cost, current_node = heapq.heappop(pq)
+
+ if current_node == goal:
+ return construct_path(parents, goal)
+
+ if current_node in visited:
+ continue
+
+ visited.add(current_node)
+ for neighbor, cost in graph[current_node].items():
+ new_cost = costs[current_node] + cost
+
+ if new_cost < costs[neighbor]:
+ costs[neighbor] = new_cost
+ parents[neighbor] = current_node
+ heapq.heappush(pq, (new_cost, neighbor))
+
+ return "No path found"
+
+def construct_path(parents, goal):
+ path = []
+ current_node = goal
+
+ while current_node is not None:
+ path.append(current_node)
+ current_node = parents.get(current_node)
+
+ return list(reversed(path))
+
+graph = {}
+n = int(input("Enter the number of edges: "))
+for _ in range(n):
+ u,v,w = input("Enter edge (from to cost): ").split()
+ w = int(w)
+ if u not in graph:
+ graph[u] = {}
+ graph[u][v] = w
+ if v not in graph:
+ graph[v] = {}
+
+start = input("Enter start node: ")
+goal = input("Enter goal node: ")
+path = ucs(graph, start, goal)
+
+if path != "No path found":
+ print("Shortest Path:", "->".join(path))
+else:
+ print("No path found")
+
+
+
+# Greedy best first search:
+def greedy_best_first_search(graph, heuristics, start, goal):
+ open_list = [(heuristics[start], start)] # (heuristic, node)
+ visited = set()
+ parents = {}
+ while open_list:
+ # Sort open list by heuristic value
+ open_list.sort()
+ _, current = open_list.pop(0)
+ print("Visiting:", current)
+ if current == goal:
+ return construct_path(parents, goal)
+ visited.add(current)
+ for neighbor in graph.get(current, []):
+ if neighbor not in visited:
+ parents[neighbor] = current
+ open_list.append((heuristics[neighbor], neighbor))
+ return "No path found"
+def construct_path(parents, goal):
+ path = []
+ current = goal
+ while current:
+ path.append(current)
+ current = parents.get(current)
+ return list(reversed(path))
+# ------------------ INPUT SECTION ------------------
+graph = {}
+heuristics = {}
+n = int(input("Enter number of nodes: "))
+for _ in range(n):
+ node = input("Node: ")
+ neighbors = input(f"Enter neighbours of {node} (space-separated): ").split()
+ graph[node] = neighbors
+ h = int(input(f"Enter heuristic value of {node}: "))
+ heuristics[node] = h
+start = input("Enter start node: ")
+goal = input("Enter goal node: ")
+path = greedy_best_first_search(graph, heuristics, start, goal)
+if path == "No path found":
+ print("No path found")
+else:
+ print("Path:", " -> ".join(path))
+
+
+# A* search:
+def a_star_search(graph, heuristics, start, goal):
+ open_list = [(heuristics[start], 0, start, [start])] # (f = g+h, g, current_node, path)
+ visited = set()
+ while open_list:
+ # Sort the open list based on f value (total cost)
+ open_list.sort()
+ f, g, current, path = open_list.pop(0)
+ if current == goal:
+ return path, g
+ if current in visited:
+ continue
+ visited.add(current)
+ for neighbor, cost in graph.get(current, []):
+ if neighbor not in visited:
+ new_g = g + cost
+ new_f = new_g + heuristics.get(neighbor, 0)
+ open_list.append((new_f, new_g, neighbor, path + [neighbor]))
+ return None, None
+# ----------------- Input Section -------------------
+graph = {}
+heuristics = {}
+n = int(input("Enter number of nodes: "))
+for _ in range(n):
+ node = input("Node name: ")
+ heuristics[node] = int(input(f"Heuristic value for {node}: "))
+ neighbors = input(f"Enter neighbors of {node} (format: B 2 C 3): ").split()
+
+ edges = []
+ for i in range(0, len(neighbors), 2):
+ neighbor = neighbors[i]
+ cost = int(neighbors[i+1])
+ edges.append((neighbor, cost))
+
+ graph[node] = edges
+start = input("Enter start node: ")
+goal = input("Enter goal node: ")
+# ----------------- Output Section -------------------
+path, cost = a_star_search(graph, heuristics, start, goal)
+if path:
+ print("Path found:", " -> ".join(path))
+ print("Total cost:", cost)
+else:
+ print("No path found")
+
+
+# Blocks world problem
+def apply_action(state, action):
+ new_state = state[:]
+ if action[0] == "Unstack":
+ X, Y = action[1], action[2]
+ new_state.remove((X, Y))
+ new_state.append((X, "table"))
+ elif action[0] == "Stack":
+ X, Y = action[1], action[2]
+ new_state.remove((X, "table"))
+ new_state.append((X, Y))
+ return new_state
+
+def get_clear_blocks(state):
+ clear_blocks = []
+ blocks_on_others = []
+ blocks_with_something_on_top = []
+ for pair in state:
+ block_above = pair[0]
+ block_below = pair[1]
+ blocks_on_others.append(block_above)
+ blocks_with_something_on_top.append(block_below)
+ for block in blocks_on_others:
+ if block not in blocks_with_something_on_top:
+ clear_blocks.append(block)
+ return clear_blocks
+def dfs(initial, goal):
+ stack = [(initial, [])]
+ visited = set()
+ while stack:
+ state, actions = stack.pop()
+ state_tuple = tuple(sorted(state))
+ if state_tuple in visited:
+ continue
+ visited.add(state_tuple)
+ if sorted(state) == sorted(goal):
+ return actions
+ clear_blocks = get_clear_blocks(state)
+ for X, Y in state:
+ if X in clear_blocks and Y != "table":
+ # Unstack X from Y
+ action = ("Unstack", X, Y)
+ new_state = apply_action(state, action)
+ stack.append((new_state, actions + [action]))
+ for X, Y in state:
+ if Y == "table" and X in clear_blocks:
+ for Z in clear_blocks:
+ if Z != X:
+ # Stack X on Z
+ action = ("Stack", X, Z)
+ new_state = apply_action(state, action)
+ stack.append((new_state, actions + [action]))
+ return None
+def get_state(prompt):
+ state = []
+ n = int(input(f"Enter number of blocks in {prompt} state: "))
+ for _ in range(n):
+ pair = input(f"Enter pair as 'A B' (means A on B): ").split()
+ state.append((pair[0], pair[1].lower() if pair[1].lower() == "table" else pair[1]))
+ return state
+# Run the program
+initial_state = get_state("initial")
+goal_state = get_state("goal")
+solution = dfs(initial_state, goal_state)
+if solution:
+ print("\n Solution Found! Steps:")
+ for step in solution:
+ if step[0] == 'Unstack':
+ print(f"{step[0]} {step[1]} from {step[2]}")
+ elif step[0] == 'Stack':
+ print(f"{step[0]} {step[1]} on {step[2]}")
+
+ final_state = initial_state[:]
+ for step in solution:
+ final_state = apply_action(final_state, step)
+
+ print("\n Final state after applying all steps: ")
+ for block_on in sorted(final_state):
+ print(f"{block_on[0]} on {block_on[1]}")
+else:
+ print("\n No solution found.")
+
+
+
+% Prolog
+male(john).
+male(paul).
+female(mary).
+female(linda).
+
+parent(john, paul).
+parent(mary, paul).
+parent(john, linda).
+parent(mary, linda).
+
+father(X, Y) :- parent(X, Y), male(X).
+mother(X, Y) :- parent(X, Y), female(X).
+sibling(X, Y) :- parent(Z, X), parent(Z, Y), X \= Y.
+
+% ?- father(X, paul).
+
+
+
+Wumpus:
+∀x ∀y [Breeze(x, y) → ∃x' ∃y' (Adjacent(x, y, x', y') ∧ Pit(x', y'))]
+∀x ∀y [Stench(x, y) → ∃x' ∃y' (Adjacent(x, y, x', y') ∧ Wumpus(x', y'))]
+∀x ∀y [¬Breeze(x, y) ∧ ¬Stench(x, y) → ∀x' ∀y' (Adjacent(x, y, x', y') → Safe(x', y'))]
+
+
+# Genetics
+import random
+import string
+
+def generate_random_string(length):
+    return ''.join(random.choice(string.printable[:95]) for _ in range(length))
+
+def compute_fitness(current, target):
+    return sum(1 for c, t in zip(current, target) if c == t)
+
+def get_neighbors(current):
+    neighbors = []
+    for i in range(len(current)):
+        for char in string.printable[:95]:
+            if current[i] != char:
+                neighbor = current[:i] + char + current[i+1:]
+                neighbors.append(neighbor)
+    return neighbors
+
+def hill_climbing(target):
+    current = generate_random_string(len(target))
+    current_fitness = compute_fitness(current, target)
+    step = 0
+
+    while True:
+        print(f"Step {step}: {current} (Fitness: {current_fitness})")
+        if current == target:
+            print(f"\n Target reached in {step} steps!")
             break
-        first |= (first_sets[symbol] - {"ε"})
-        if "ε" not in first_sets[symbol]:
+
+        neighbors = get_neighbors(current)
+        next_candidate = max(neighbors, key=lambda x: compute_fitness(x, target))
+        next_fitness = compute_fitness(next_candidate, target)
+
+        if next_fitness <= current_fitness:
+            print("\n No better neighbor found. Stuck in local maximum.")
             break
+
+        current = next_candidate
+        current_fitness = next_fitness
+        step += 1
+
+# Main
+if _name_ == "_main_":
+    target = input("Enter target string: ")
+    hill_climbing(target)
+
+
+
+# Hill Climbing
+import math
+import random
+from math import sin
+
+def f1(x):
+    return sin(x)
+
+def f2(x):
+    return -x**2
+
+def f3(x):
+    return -5*x**2 + 3*x + 6
+
+def best_neighbour(f, x, step=0.1):
+    if (f(x - step) > f(x)):
+        return x - step
+    if (f(x + step) > f(x)):
+        return x + step
     else:
-        first.add("ε")
-    return first
+        return x
 
-# Fill the LL(1) parsing table
-for head in grammar:
-    for production in grammar[head]:
-        first = get_first_of_string(production)
-        for terminal in (first - {"ε"}):
-            parsing_table[head][terminal] = production
-        if "ε" in first:
-            for follow_symbol in follow_sets[head]:
-                parsing_table[head][follow_symbol] = "ε"
-
-# Print the parsing table
-print("LL(1) Parsing Table:")
-print(f"{'':<5}", end='')
-for t in sorted(terminals):
-    print(f"{t:<10}", end='')
-print()
-
-for nt in non_terminals:
-    print(f"{nt:<5}", end='')
-    for t in sorted(terminals):
-        prod = parsing_table[nt][t]
-        print(f"{prod:<10}", end='')
-    print()
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-6. Program to remove Left Recursion from the given grammar
-Grammar will be given, modified grammar without left recursion is expected
-
-def remove_left_recursion(grammar):
-    new_grammar = {}
-
-    for non_terminal in grammar:
-        alpha = []  # left recursive productions (A → Aα)
-        beta = []   # non-left recursive productions (A → β)
-
-        for production in grammar[non_terminal]:
-            if production.startswith(non_terminal):
-                alpha.append(production[len(non_terminal):])  # Remove the NT from the left
-            else:
-                beta.append(production)
-
-        # If left recursion exists
-        if alpha:
-            new_nt = non_terminal + "'"  # A' as new NT
-            new_grammar[non_terminal] = [b + new_nt for b in beta]
-            new_grammar[new_nt] = [a + new_nt for a in alpha]
-            new_grammar[new_nt].append("ε")  # add epsilon
+def hill_climbing(f, x, max_iterations=1000):
+    for i in range(max_iterations):
+        neighbour = best_neighbour(f, x)
+        if (f(neighbour) > f(x)):
+            x = neighbour
         else:
-            new_grammar[non_terminal] = grammar[non_terminal]
-
-    return new_grammar
-
-
-# Example grammar with left recursion
-grammar = {
-    "A": ["Aa", "b"],
-    "B": ["Bc", "Bd", "e"]
-}
-
-print("Original Grammar:")
-for nt in grammar:
-    print(f"{nt} -> {' | '.join(grammar[nt])}")
-
-# Remove Left Recursion
-updated_grammar = remove_left_recursion(grammar)
-
-print("\nGrammar after removing Left Recursion:")
-for nt in updated_grammar:
-    print(f"{nt} -> {' | '.join(updated_grammar[nt])}")
-
-
-
-
-7. Program to develop an Optimized Code.
-Sample Code will be given, optimized code is expected
-
-def constant_folding(code):
-    optimized = []
-    replacements = {}
-
-    for line in code:
-        parts = line.split('=')
-        if len(parts) != 2:
-            optimized.append(line)
-            continue
-
-        lhs = parts[0].strip()
-        rhs = parts[1].strip()
-
-        try:
-            result = eval(rhs)
-            replacements[lhs] = str(result)
-            optimized.append(f"{lhs} = {result}")
-        except:
-            # Replace known constants in the RHS
-            for var, val in replacements.items():
-                rhs = rhs.replace(var, val)
-            optimized.append(f"{lhs} = {rhs}")
-
-    return optimized
-
-
-def common_subexpression_elimination(code):
-    expressions = {}
-    optimized = []
-
-    for line in code:
-        if '=' not in line:
-            optimized.append(line)
-            continue
-
-        lhs, rhs = [x.strip() for x in line.split('=')]
-
-        # Skip replacement if RHS is a constant value
-        try:
-            eval(rhs)
-            # it's a constant, don't replace with a variable
-            optimized.append(f"{lhs} = {rhs}")
-            continue
-        except:
-            pass
-
-        if rhs in expressions:
-            optimized.append(f"{lhs} = {expressions[rhs]}")
-        else:
-            expressions[rhs] = lhs
-            optimized.append(f"{lhs} = {rhs}")
-
-    return optimized
-
-
-def optimize_code(code):
-    print("\nStep 1: Constant Folding")
-    code = constant_folding(code)
-    for c in code:
-        print(c)
-
-    print("\nStep 2: Common Subexpression Elimination")
-    code = common_subexpression_elimination(code)
-    for c in code:
-        print(c)
-
-    return code
-
-
-# 🔸 Sample input code
-sample_code = [
-    "t1 = 4 + 5",
-    "t2 = a + b",
-    "t3 = 4 + 5",
-    "t4 = t1 + t2",
-    "t5 = t3 + t2",
-    "t6 = t1 + t2",
-    "t7 = 2 * 3"
-]
-
-print("Original Code:")
-for line in sample_code:
-    print(line)
-
-# 🔧 Optimize
-final_code = optimize_code(sample_code)
-
-print("\n🔹 Final Optimized Code:")
-for line in final_code:
-    print(line)
-
-
-
-8. Program to implement Lexical Analyzer
-
-import re
-
-# Define token categories
-keywords = {"int", "float", "char", "if", "else", "while", "for", "return", "void"}
-operators = {'+', '-', '*', '/', '=', '==', '!=', '<', '>', '<=', '>=', '&&', '||'}
-separators = {'(', ')', '{', '}', ';', ','}
-
-# Classify each token
-def classify_token(token):
-    if token in keywords:
-        return "Keyword"
-    elif token in operators:
-        return "Operator"
-    elif token in separators:
-        return "Separator"
-    elif re.fullmatch(r'\d+(\.\d+)?', token):
-        return "Literal"
-    elif re.fullmatch(r'[a-zA-Z_]\w*', token):
-        return "Identifier"
-    else:
-        return "Unknown"
-
-# Lexical Analyzer
-def lexical_analyzer(code):
-    # Improved token pattern: float, int, words, multi-char ops, single-char ops/seps
-    tokens = re.findall(r'\d+\.\d+|\d+|==|!=|<=|>=|[a-zA-Z_]\w*|[^\s]', code)
-
-    token_types = {
-        "Keyword": set(),
-        "Identifier": set(),
-        "Operator": set(),
-        "Literal": set(),
-        "Separator": set(),
-        "Unknown": set()
-    }
-
-    for token in tokens:
-        category = classify_token(token)
-        token_types[category].add(token)
-
-    # Print grouped results
-    print("=== Lexical Analyzer Output (Grouped by Type) ===\n")
-    for category in ["Keyword", "Identifier", "Operator", "Literal", "Separator", "Unknown"]:
-        if token_types[category]:
-            print(f"{category}s: {', '.join(sorted(token_types[category]))}")
-
-# 🔸 Sample Code
-sample_code = """
-int a = 5;
-float b = 3.14;
-if (a > b) {
-    a = a + b;
-}
-"""
-
-lexical_analyzer(sample_code)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-9. LEX Program to check whether input character is vowel or consonants.
-
-%{
-#include <stdio.h>
-
-int yywrap(void){
-return 1;
-}
-%}
-
-%%
-
-[aeiouAEIOU]     { printf("'%s' is a VOWEL\n", yytext); }
-[a-zA-Z]         { printf("'%s' is a CONSONANT\n", yytext); }
-.|\n             { /* Ignore any other characters */ }
-
-%%
-
-int main() {
-    printf("Enter a character: ");
-    yylex();
-    return 0;
-}
-
-
-
-Save the code in a file named vowel_consonant.l
-
-lex vowel_consonant.l
-gcc lex.yy.c -o vowel_consonant
-./vowel_consonant
-
-
-10. LEX Program to check whether the string is a word or a number.
-
-%{
-#include <stdio.h>
-int yywrap(void);
-%}
-
-%%
-
-[0-9]+(\.[0-9]+)?    { printf("'%s' is a NUMBER\n", yytext); }
-[a-zA-Z]+            { printf("'%s' is a WORD\n", yytext); }
-.|\n                 { /* Ignore other characters */ }
-
-%%
-
-int yywrap(void) {
-    return 1;
-}
-
-int main() {
-    printf("Enter input: ");
-    yylex();
-    return 0;
-}
-
-
-
-
-11. EX Program to count the number of lines, words and characters in a text.
-
-%{
-#include <stdio.h>
-
-int line_count = 0;
-int word_count = 0;
-int char_count = 0;
-
-int yywrap(void);
-%}
-
-%%
-
-\n              { line_count++; char_count++; }
-[ \t]+          { char_count += yyleng; }                     // Spaces and tabs (word separators)
-[a-zA-Z0-9]+    { word_count++; char_count += yyleng; }       // Words (letters/numbers)
-.               { char_count += yyleng; }                     // All other characters
-
-%%
-
-int yywrap(void) {
-    return 1;
-}
-
-int main() {
-    printf("Enter text (Ctrl+D to end input):\n");
-    yylex();
-    printf("\nLines: %d\nWords: %d\nCharacters: %d\n", line_count, word_count, char_count);
-    return 0;
-}
-
-
-
-
-12. LEX Program to implement Lexical Analyzer
-
-%{
-#include <stdio.h>
-#include <string.h>
-
-char *keywords[] = {
-    "int", "float", "char", "double", "if", "else", "while", "for", "return", "void"
-};
-int isKeyword(char *str) {
-    for(int i = 0; i < sizeof(keywords)/sizeof(keywords[0]); i++) {
-        if(strcmp(str, keywords[i]) == 0)
-            return 1;
-    }
-    return 0;
-}
-%}
-
-%%
-[ \t\n]                  ; // Ignore whitespace
-"=="|"!="|"<="|">="|"="|"<"|">"    { printf("Relational Operator: %s\n", yytext); }
-"*"|"+"|"-"|"/"          { printf("Arithmetic Operator: %s\n", yytext); }
-[0-9]+\.[0-9]+           { printf("Float Literal: %s\n", yytext); }
-[0-9]+                   { printf("Integer Literal: %s\n", yytext); }
-[a-zA-Z_][a-zA-Z0-9_]*   {
-                            if (isKeyword(yytext))
-                                printf("Keyword: %s\n", yytext);
-                            else
-                                printf("Identifier: %s\n", yytext);
-                         }
-.                        { printf("Special Symbol: %s\n", yytext); }
-%%
-
-int main() {
-    printf("Enter the input:\n");
-    yylex();
-    return 0;
-}
-
-int yywrap() {
-    return 1;
-}
-
-
-
-
+            break
+    return x
+
+if _name_ == "_main_":
+    ranges = [(-math.pi, math.pi), (-1, 1), (-100, 100)]
+    functions = [f1, f2, f3]
+    for i, f in enumerate(functions):
+        x = random.uniform(ranges[i][0], ranges[i][1])
+        best_pos = round(hill_climbing(f, x), 4)
+        value = round(f(best_pos), 4)
+        print(f'For function {i + 1}, the best position is {best_pos} with a value of {value}.')
 
