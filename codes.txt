@@ -1,477 +1,452 @@
-Experiment 2:
-
-def dfs_recursive(graph,start,visited=None):
- if visited is None:
- visited = set()
- visited.add(start)
- print(start)
- for child in graph[start]:
- if child not in visited:
- dfs_recursive(graph,child,visited)
-n = int(input("Enter the number of node: "))
-graph = {}
-for _ in range(n):
- node = input("Node: ")
- graph[node] = input(f"Enter neighbours of {node} (space-separated): ").split()
-
-start = input("Start node: ")
-dfs_recursive(graph,start)
-
-
-# DLS(depth limit search):
-def dfs_recursive(graph,start,depth,limit,visited=None):
- if visited is None:
- visited = set()
- visited.add(start)
- print(start)
-
- if depth >= limit:
- return
-
- for child in graph[start]:
- if child not in visited:
- dfs_recursive(graph,child,depth+1,limit,visited)
-n = int(input("Enter the number of node: "))
-graph = {}
-for _ in range(n):
- node = input("Node: ")
- graph[node] = input(f"Enter neighbours of {node} (space-separated): ").split()
-
-limit = int(input("Enter the limit: "))
-start = input("Start node: ")
-depth = 0
-dfs_recursive(graph,start,depth,limit)
-
-
-# DFID:
-def dls(graph,node,target,depth,limit,visited,path):
- path.append(node)
- print("Visiting: ",node)
-
- if node == target:
- print("Found the target!")
- print("Path to target:", " -> ".join(path))
- return True, True
-
- if depth == limit:
- path.pop()
- return False, len(graph[node]) == 0
-
- found = False
- bottom_reached = True
-
- for child in graph[node]:
- if child not in visited:
- result, reached = dls(graph,child,target,depth+1,limit,visited,path)
- if result:
- return True,True
- bottom_reached = bottom_reached and reached
-
- path.pop()
- return False,bottom_reached
-
-def dfid(graph,start,target):
- depth = 0
- while True:
- print(f"\nDepth Limit: {depth}")
- visited = set([start])
- path = []
- found,bottom = dls(graph,start,target,0,depth,visited,path)
- if found:
- return True
- if bottom:
- return False
- depth += 1
-n = int(input("Enter number of nodes: "))
-graph = {}
-for _ in range(n):
- node = input("Node: ")
- graph[node] = input(f"Enter neighbours of {node} (space-separated): ").split()
-start = input("Start node: ")
-target = input("Target node: ")
-found = dfid(graph, start, target)
-if found:
- print("\nTarget found!")
-else:
- print("\nTarget not found.")
-
-
-
-# BFS:
-def bfs(graph, root):
- visited = set()
- queue = [root]
- visited.add(root)
- while queue:
- # Dequeue from front of the list
- vertex = queue.pop(0)
- print(str(vertex) + " ", end="")
- for neighbour in graph[vertex]:
- if neighbour not in visited:
- visited.add(neighbour)
- queue.append(neighbour)
-n = int(input("Enter the number of vertexes: "))
-graph = {}
-for _ in range(n):
- node = input("Enter node: ")
- graph[node] = input(f"Enter neighbours of {node} (space-separated): ").split()
-
-root = input("Enter root node: ")
-bfs(graph,root)
-
-
-# UCS:
-import heapq # Import the heapq module for the priority queue
-
-def ucs(graph, start, goal):
- pq = []
- heapq.heappush(pq, (0, start))
-
- costs = {}
- for node in graph:
- costs[node] = float('inf')
-
- costs[start] = 0
- parents = {}
- visited = set()
-
- while pq:
- current_cost, current_node = heapq.heappop(pq)
-
- if current_node == goal:
- return construct_path(parents, goal)
-
- if current_node in visited:
- continue
-
- visited.add(current_node)
- for neighbor, cost in graph[current_node].items():
- new_cost = costs[current_node] + cost
-
- if new_cost < costs[neighbor]:
- costs[neighbor] = new_cost
- parents[neighbor] = current_node
- heapq.heappush(pq, (new_cost, neighbor))
-
- return "No path found"
-
-def construct_path(parents, goal):
- path = []
- current_node = goal
-
- while current_node is not None:
- path.append(current_node)
- current_node = parents.get(current_node)
-
- return list(reversed(path))
-
-graph = {}
-n = int(input("Enter the number of edges: "))
-for _ in range(n):
- u,v,w = input("Enter edge (from to cost): ").split()
- w = int(w)
- if u not in graph:
- graph[u] = {}
- graph[u][v] = w
- if v not in graph:
- graph[v] = {}
-
-start = input("Enter start node: ")
-goal = input("Enter goal node: ")
-path = ucs(graph, start, goal)
-
-if path != "No path found":
- print("Shortest Path:", "->".join(path))
-else:
- print("No path found")
-
-
-
-# Greedy best first search:
-def greedy_best_first_search(graph, heuristics, start, goal):
- open_list = [(heuristics[start], start)] # (heuristic, node)
- visited = set()
- parents = {}
- while open_list:
- # Sort open list by heuristic value
- open_list.sort()
- _, current = open_list.pop(0)
- print("Visiting:", current)
- if current == goal:
- return construct_path(parents, goal)
- visited.add(current)
- for neighbor in graph.get(current, []):
- if neighbor not in visited:
- parents[neighbor] = current
- open_list.append((heuristics[neighbor], neighbor))
- return "No path found"
-def construct_path(parents, goal):
- path = []
- current = goal
- while current:
- path.append(current)
- current = parents.get(current)
- return list(reversed(path))
-# ------------------ INPUT SECTION ------------------
-graph = {}
-heuristics = {}
-n = int(input("Enter number of nodes: "))
-for _ in range(n):
- node = input("Node: ")
- neighbors = input(f"Enter neighbours of {node} (space-separated): ").split()
- graph[node] = neighbors
- h = int(input(f"Enter heuristic value of {node}: "))
- heuristics[node] = h
-start = input("Enter start node: ")
-goal = input("Enter goal node: ")
-path = greedy_best_first_search(graph, heuristics, start, goal)
-if path == "No path found":
- print("No path found")
-else:
- print("Path:", " -> ".join(path))
-
-
-# A* search:
-def a_star_search(graph, heuristics, start, goal):
- open_list = [(heuristics[start], 0, start, [start])] # (f = g+h, g, current_node, path)
- visited = set()
- while open_list:
- # Sort the open list based on f value (total cost)
- open_list.sort()
- f, g, current, path = open_list.pop(0)
- if current == goal:
- return path, g
- if current in visited:
- continue
- visited.add(current)
- for neighbor, cost in graph.get(current, []):
- if neighbor not in visited:
- new_g = g + cost
- new_f = new_g + heuristics.get(neighbor, 0)
- open_list.append((new_f, new_g, neighbor, path + [neighbor]))
- return None, None
-# ----------------- Input Section -------------------
-graph = {}
-heuristics = {}
-n = int(input("Enter number of nodes: "))
-for _ in range(n):
- node = input("Node name: ")
- heuristics[node] = int(input(f"Heuristic value for {node}: "))
- neighbors = input(f"Enter neighbors of {node} (format: B 2 C 3): ").split()
-
- edges = []
- for i in range(0, len(neighbors), 2):
- neighbor = neighbors[i]
- cost = int(neighbors[i+1])
- edges.append((neighbor, cost))
-
- graph[node] = edges
-start = input("Enter start node: ")
-goal = input("Enter goal node: ")
-# ----------------- Output Section -------------------
-path, cost = a_star_search(graph, heuristics, start, goal)
-if path:
- print("Path found:", " -> ".join(path))
- print("Total cost:", cost)
-else:
- print("No path found")
-
-
-# Blocks world problem
-def apply_action(state, action):
- new_state = state[:]
- if action[0] == "Unstack":
- X, Y = action[1], action[2]
- new_state.remove((X, Y))
- new_state.append((X, "table"))
- elif action[0] == "Stack":
- X, Y = action[1], action[2]
- new_state.remove((X, "table"))
- new_state.append((X, Y))
- return new_state
-
-def get_clear_blocks(state):
- clear_blocks = []
- blocks_on_others = []
- blocks_with_something_on_top = []
- for pair in state:
- block_above = pair[0]
- block_below = pair[1]
- blocks_on_others.append(block_above)
- blocks_with_something_on_top.append(block_below)
- for block in blocks_on_others:
- if block not in blocks_with_something_on_top:
- clear_blocks.append(block)
- return clear_blocks
-def dfs(initial, goal):
- stack = [(initial, [])]
- visited = set()
- while stack:
- state, actions = stack.pop()
- state_tuple = tuple(sorted(state))
- if state_tuple in visited:
- continue
- visited.add(state_tuple)
- if sorted(state) == sorted(goal):
- return actions
- clear_blocks = get_clear_blocks(state)
- for X, Y in state:
- if X in clear_blocks and Y != "table":
- # Unstack X from Y
- action = ("Unstack", X, Y)
- new_state = apply_action(state, action)
- stack.append((new_state, actions + [action]))
- for X, Y in state:
- if Y == "table" and X in clear_blocks:
- for Z in clear_blocks:
- if Z != X:
- # Stack X on Z
- action = ("Stack", X, Z)
- new_state = apply_action(state, action)
- stack.append((new_state, actions + [action]))
- return None
-def get_state(prompt):
- state = []
- n = int(input(f"Enter number of blocks in {prompt} state: "))
- for _ in range(n):
- pair = input(f"Enter pair as 'A B' (means A on B): ").split()
- state.append((pair[0], pair[1].lower() if pair[1].lower() == "table" else pair[1]))
- return state
-# Run the program
-initial_state = get_state("initial")
-goal_state = get_state("goal")
-solution = dfs(initial_state, goal_state)
-if solution:
- print("\n Solution Found! Steps:")
- for step in solution:
- if step[0] == 'Unstack':
- print(f"{step[0]} {step[1]} from {step[2]}")
- elif step[0] == 'Stack':
- print(f"{step[0]} {step[1]} on {step[2]}")
-
- final_state = initial_state[:]
- for step in solution:
- final_state = apply_action(final_state, step)
-
- print("\n Final state after applying all steps: ")
- for block_on in sorted(final_state):
- print(f"{block_on[0]} on {block_on[1]}")
-else:
- print("\n No solution found.")
-
-
-
-% Prolog
-male(john).
-male(paul).
-female(mary).
-female(linda).
-
-parent(john, paul).
-parent(mary, paul).
-parent(john, linda).
-parent(mary, linda).
-
-father(X, Y) :- parent(X, Y), male(X).
-mother(X, Y) :- parent(X, Y), female(X).
-sibling(X, Y) :- parent(Z, X), parent(Z, Y), X \= Y.
-
-% ?- father(X, paul).
-
-
-
-Wumpus:
-∀x ∀y [Breeze(x, y) → ∃x' ∃y' (Adjacent(x, y, x', y') ∧ Pit(x', y'))]
-∀x ∀y [Stench(x, y) → ∃x' ∃y' (Adjacent(x, y, x', y') ∧ Wumpus(x', y'))]
-∀x ∀y [¬Breeze(x, y) ∧ ¬Stench(x, y) → ∀x' ∀y' (Adjacent(x, y, x', y') → Safe(x', y'))]
-
-
-# Genetics
-import random
-import string
-
-def generate_random_string(length):
-    return ''.join(random.choice(string.printable[:95]) for _ in range(length))
-
-def compute_fitness(current, target):
-    return sum(1 for c, t in zip(current, target) if c == t)
-
-def get_neighbors(current):
-    neighbors = []
-    for i in range(len(current)):
-        for char in string.printable[:95]:
-            if current[i] != char:
-                neighbor = current[:i] + char + current[i+1:]
-                neighbors.append(neighbor)
-    return neighbors
-
-def hill_climbing(target):
-    current = generate_random_string(len(target))
-    current_fitness = compute_fitness(current, target)
-    step = 0
-
-    while True:
-        print(f"Step {step}: {current} (Fitness: {current_fitness})")
-        if current == target:
-            print(f"\n Target reached in {step} steps!")
-            break
-
-        neighbors = get_neighbors(current)
-        next_candidate = max(neighbors, key=lambda x: compute_fitness(x, target))
-        next_fitness = compute_fitness(next_candidate, target)
-
-        if next_fitness <= current_fitness:
-            print("\n No better neighbor found. Stuck in local maximum.")
-            break
-
-        current = next_candidate
-        current_fitness = next_fitness
-        step += 1
-
-# Main
-if _name_ == "_main_":
-    target = input("Enter target string: ")
-    hill_climbing(target)
-
-
-
-# Hill Climbing
-import math
-import random
-from math import sin
-
-def f1(x):
-    return sin(x)
-
-def f2(x):
-    return -x**2
-
-def f3(x):
-    return -5*x**2 + 3*x + 6
-
-def best_neighbour(f, x, step=0.1):
-    if (f(x - step) > f(x)):
-        return x - step
-    if (f(x + step) > f(x)):
-        return x + step
-    else:
-        return x
-
-def hill_climbing(f, x, max_iterations=1000):
-    for i in range(max_iterations):
-        neighbour = best_neighbour(f, x)
-        if (f(neighbour) > f(x)):
-            x = neighbour
-        else:
-            break
-    return x
-
-if _name_ == "_main_":
-    ranges = [(-math.pi, math.pi), (-1, 1), (-100, 100)]
-    functions = [f1, f2, f3]
-    for i, f in enumerate(functions):
-        x = random.uniform(ranges[i][0], ranges[i][1])
-        best_pos = round(hill_climbing(f, x), 4)
-        value = round(f(best_pos), 4)
-        print(f'For function {i + 1}, the best position is {best_pos} with a value of {value}.')
+import java.io.*;
+import java.net.*;
+
+public class Exp1Client {
+    public static void main(String[] args) throws Exception{
+        Socket socket=new Socket("localhost", 5000);
+
+        PrintWriter out=new PrintWriter(socket.getOutputStream(), true);
+        out.println("Add 20 and 50");
+
+        BufferedReader in=new BufferedReader(
+            new InputStreamReader(socket.getInputStream())
+        );
+        String ans=in.readLine();
+        System.out.println("Server answered:"+ ans);
+
+        socket.close();
+    }
+}
+
+
+
+import java.io.*;
+import java.net.*;
+
+public class Exp1Server {
+    public static void main(String[] args) throws Exception {
+        ServerSocket server=new ServerSocket(5000);
+        System.out.println("Server waiting to connect...");
+        Socket socket=server.accept();
+
+        BufferedReader in=new BufferedReader(
+            new InputStreamReader(socket.getInputStream())
+        );
+        String msg=in.readLine();
+        System.out.println("Client says:"+ msg);
+        int ans=calculate(msg);
+
+        PrintWriter out=new PrintWriter(socket.getOutputStream(), true);
+        out.println(ans);
+
+        socket.close();
+        server.close();
+    }
+
+    public static int calculate(String msg) {
+        int ans=0;
+        String words[]=msg.split(" ");
+        ans=Integer.parseInt(words[1])+Integer.parseInt(words[3]);
+        return ans;
+    }
+}
+
+
+
+
+import java.util.ArrayList;
+import java.util.List;
+
+public class Exp2RaymondTreeBased {
+
+    static int holder[] = {1, 1, 2, 2};   // parent/holder of each process
+    static boolean hasToken[] = {true, false, false, false};
+
+    static void requestCS(int p) {
+
+        System.out.println("Process " + p + " requests Critical Section");
+        int originalRequester = p;
+        List<Integer> path = new ArrayList<>();
+        path.add(p);
+
+        while (!hasToken[p - 1]) {
+
+            int parent = holder[p - 1];
+
+            System.out.println("Request sent from P" + p + " to P" + parent);
+            path.add(parent);
+            p = parent;
+        }
+
+        System.out.println("Token found at P" + p);
+
+        // Pass the token back down the tree and update holder pointers
+        for (int i = path.size() - 1; i > 0; i--) {
+            int giver = path.get(i);
+            int receiver = path.get(i - 1);
+            
+            System.out.println("Token passed from P" + giver + " to P" + receiver);
+            hasToken[giver - 1] = false;
+            hasToken[receiver - 1] = true;
+            holder[giver - 1] = receiver; // Reversing the edge towards new token holder
+        }
+        holder[originalRequester - 1] = originalRequester; // New token holder points to itself
+
+        System.out.println("Process " + originalRequester + " enters Critical Section\n");
+    }
+
+    public static void main(String[] args) {
+
+        System.out.println("Initial Token Holder: Process 1\n");
+
+        requestCS(3);
+        requestCS(4);
+    }
+}
+
+
+
+public class Exp3DistributedGlobalAveraging {
+    public static void main(String[] args) {
+        double nodes[]={10, 20, 30, 40, 50};
+        int n=nodes.length;
+
+        for(int round=0; round<=15; round++) {
+            double nextState[]=new double[5];
+            for(int i=0; i<nodes.length; i++) {
+                int left=(i-1+n)%n;
+                int right=(i+1)%n;
+                nextState[i]=(nodes[left]+nodes[right]+nodes[i])/3.0;
+            }
+
+            nodes=nextState;
+            if(round%3==0) {
+                System.out.print("Round "+ round +" values:");
+                for(double val:nodes)
+                    System.out.printf("%.2f ", val);
+                System.out.println();
+            }
+        }
+    }
+}
+
+
+
+
+import java.util.*;
+
+public class Exp4LoadBalancing {
+    public static void main(String[] args) {
+        Scanner sc=new Scanner(System.in);
+
+        System.out.print("Enter number of nodes:");
+        int n=sc.nextInt();
+        System.out.print("Enter number of processes:");
+        int p=sc.nextInt();
+
+        int load[]=new int[n];
+
+        for(int i=0; i<p; i++) {
+            int minNode=0;
+
+            for(int j=1; j<n; j++) {
+                if(load[j]<load[minNode])
+                    minNode=j;
+            }
+
+            load[minNode]++;
+            System.out.println("Process "+ (i+1) +" is assigned to Node "+ (minNode+1));
+        }
+
+        System.out.println(Arrays.toString(load));
+
+        sc.close();
+    }
+}
+
+
+
+
+import java.util.*;
+
+public class Exp5Bully {
+    static int processes=5;
+    static boolean[] active={true, true, true, true, true};
+    static int[] processId={1, 2, 3, 4, 5};
+
+    public static void election(int c) {
+        System.out.println("Process "+ c +" starts the election");
+        int ans=c-1;
+
+        for(int i=ans+1; i<processId.length; i++) {
+            if(active[i]==true && processId[i]>ans) {
+                System.out.println("P"+ (ans+1) +" sends elections message to P"+ (i+1));
+                ans=i;
+                System.out.println("Process "+ (ans+1) +" starts the election");
+            }
+        }
+
+        System.out.println("Process "+ (ans+1) +" becomes the co-ordinator of the system");
+    }
+    
+    public static void main(String args[]) {
+        Scanner sc=new Scanner(System.in);
+
+        System.out.println("5 Processes are running, which process to fail?");
+        int p=sc.nextInt();
+        active[p-1]=false;
+        System.out.println("Which process detects the failure?");
+        int c=sc.nextInt();
+        election(c);
+
+        sc.close();
+    }
+}
+
+
+
+
+import java.net.*;
+import java.io.*;
+
+public class Exp6GroupReceiver {
+    public static void main(String[] args) {
+        try {
+            int port = 5000;
+            InetAddress group = InetAddress.getByName("225.0.0.1");
+            InetSocketAddress groupAddress = new InetSocketAddress(group, port);
+            NetworkInterface networkInterface = NetworkInterface.getByInetAddress(InetAddress.getLocalHost());
+
+            MulticastSocket socket = new MulticastSocket(port);
+            
+            socket.joinGroup(groupAddress, networkInterface);
+
+            System.out.println("Joined group using modern API. Waiting...");
+
+            byte[] buffer = new byte[256];
+            DatagramPacket packet = new DatagramPacket(buffer, buffer.length);
+            
+            socket.receive(packet);
+            String message = new String(packet.getData(), 0, packet.getLength());
+            System.out.println("Received: " + message);
+            socket.leaveGroup(groupAddress, networkInterface);
+            socket.close();
+            
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+}
+
+
+
+
+import java.net.*;
+import java.io.*;
+
+public class Exp6GroupSender {
+    public static void main(String[] args) {
+        try {
+            InetAddress group = InetAddress.getByName("225.0.0.1");
+            int port = 5000;
+            MulticastSocket socket = new MulticastSocket();
+
+            String message = "Hello, everyone in the group!";
+            byte buffer[] = message.getBytes();
+            DatagramPacket packet = new DatagramPacket(buffer, buffer.length, group, port);
+            socket.send(packet);
+
+            System.out.println("Message sent to the group.");
+            socket.close();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+}
+
+
+
+
+public class Exp7RicartAgrawala {
+    static int n=3;
+    static int timestamp[]={5, 3, 7};
+
+    public static void cs(int p) {
+        int flag=0;
+
+        for(int i=0; i<n; i++) {
+            if(i==p)
+                continue;
+
+            System.out.println("P"+ (p+1) +" sends request to P"+ (i+1));
+            if(timestamp[p]<timestamp[i]) {
+                System.out.println("P"+ (i+1) +" sends OK to P"+ (p+1));
+            }
+            else {
+                System.out.println("P"+ (i+1) +" DEFERS reply to P"+ (p+1));
+                flag++;
+            }
+        }
+
+        if(flag==0)
+            System.out.println("Process "+ p +" can enter into Critical Section");
+        else
+            System.out.println("Process "+ p +" cannot enter into Critical Section & has to wait");
+    }
+
+    public static void main(String args[]) {
+        int p=2;
+        System.out.println("Process "+ (p+1) +" requests Critical Section");
+        cs(p);
+    }
+}
+
+
+
+
+
+public class Exp8Bankers {
+
+    public static void main(String[] args) {
+
+        int processes = 3;
+        int resources = 3;
+
+        int allocation[][] = {
+                {0, 1, 0},
+                {2, 0, 0},
+                {3, 0, 2}
+        };
+
+        int max[][] = {
+                {7, 5, 3},
+                {3, 2, 2},
+                {9, 0, 2}
+        };
+
+        int available[] = {3, 3, 2};
+
+        int need[][] = new int[processes][resources];
+
+        // Calculate Need
+        for (int i = 0; i < processes; i++) {
+            for (int j = 0; j < resources; j++) {
+                need[i][j] = max[i][j] - allocation[i][j];
+            }
+        }
+
+        boolean finished[] = new boolean[processes];
+        int safeSeq[] = new int[processes];
+        int work[] = available.clone();
+
+        int count = 0;
+
+        while (count < processes) {
+
+            boolean found = false;
+
+            for (int i = 0; i < processes; i++) {
+
+                if (!finished[i]) {
+
+                    int j;
+                    for (j = 0; j < resources; j++) {
+                        if (need[i][j] > work[j])
+                            break;
+                    }
+
+                    if (j == resources) {
+
+                        for (int k = 0; k < resources; k++) {
+                            work[k] += allocation[i][k];
+                        }
+
+                        safeSeq[count++] = i;
+                        finished[i] = true;
+                        found = true;
+                    }
+                }
+            }
+
+            if (!found) {
+                System.out.println("System is NOT in safe state");
+                return;
+            }
+        }
+
+        System.out.print("Safe Sequence: ");
+        for (int i = 0; i < processes; i++) {
+            System.out.print("P" + safeSeq[i] + " ");
+        }
+    }
+}
+
+
+
+
+import java.util.Scanner;
+
+public class Exp9Berkley {
+    public static void main(String[] args) {
+        Scanner sc=new Scanner(System.in);
+
+        System.out.print("Enter number of nodes(including master):");
+        int n=sc.nextInt();
+        int time[]=new int[n];
+        for(int i=0; i<n; i++) {
+            System.out.print("Enter time for node "+ i +":");
+            time[i]=sc.nextInt();
+        }
+
+        int avg=0, sum=0;
+        for(int t:time)
+            sum+=t;
+        avg=sum/n;
+
+        System.out.println("\nAdjusted Times:-");
+        for(int i=0; i<n; i++) {
+            int offset=avg-time[i];
+            time[i]+=offset;
+            System.out.println("Node "+ i +" is adjusted by "+ offset +" -> "+ time[i]);
+        }
+
+        sc.close();
+    }
+}
+
+
+
+
+class MyThread extends Thread {
+    String name;
+    
+    public MyThread(String name) {
+        this.name=name;
+    }
+
+    public void run() {
+        for(int i=1; i<=3; i++) {
+            System.out.println(name +" is at step "+ i);
+            try {
+                Thread.sleep(500);
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
+    }
+}
+
+public class Exp10Multithreading {
+    public static void main(String[] args) {
+        Thread t1=new MyThread("apple");
+        Thread t2=new MyThread("banana");
+
+        t1.start();
+        t2.start();
+    }
+}
+
+
+
+
 
